@@ -66,7 +66,7 @@ type GetMarketsResponse struct {
 type Market struct {
 	ID                     int64         `json:"id"`
 	ImageURL               string        `json:"imageUrl"`
-	Title                  string        `json:"title"`
+	Title                  string        `json:"title"` // predict.fun 的 title 是子市场短标签（如 $150M、Discord、OpenAI、England)
 	Question               string        `json:"question"`
 	Description            string        `json:"description"`
 	TradingStatus          string        `json:"tradingStatus"`
