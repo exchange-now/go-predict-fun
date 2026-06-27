@@ -80,10 +80,12 @@ func main() {
 
 Fetch the book from `GET /markets/{marketId}/orderbook`, then:
 
+`DepthLevel` is `[2]json.Number` (`[price, size]`), matching the raw API and avoiding float precision loss. Build levels with string literals:
+
 ```go
 book := predictfun.Book{
-	Asks: []predictfun.DepthLevel{{0.5, 3}, {0.88, 4}},
-	Bids: []predictfun.DepthLevel{{0.9, 2}, {0.5, 3}},
+	Asks: []predictfun.DepthLevel{{"0.5", "3"}, {"0.88", "4"}},
+	Bids: []predictfun.DepthLevel{{"0.9", "2"}, {"0.5", "3"}},
 }
 
 amounts, err := ob.GetMarketOrderAmounts(predictfun.MarketHelperInput{

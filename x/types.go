@@ -1,6 +1,7 @@
 package x
 
 import (
+	"encoding/json"
 	"math/big"
 	"time"
 
@@ -30,8 +31,10 @@ const (
 	OrderStrategyLimit  OrderStrategy = "LIMIT"
 )
 
-// DepthLevel is [price, quantity] from the order book API.
-type DepthLevel [2]float64
+// DepthLevel is [price, quantity] from the order book API. Values are kept as
+// json.Number so the exact wire representation is preserved and converted to
+// wei without ever passing through a float64.
+type DepthLevel [2]json.Number
 
 // Book is the order book returned by GET /markets/{id}/orderbook.
 type Book struct {

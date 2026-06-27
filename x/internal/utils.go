@@ -1,9 +1,9 @@
 package internal
 
 import (
-	"math"
+	"encoding/json"
 	"math/big"
-	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -37,15 +37,69 @@ func RetainSignificantDigits(num *big.Int, significantDigits int) *big.Int {
 	return result
 }
 
-// ParseEtherFloat converts a floating-point ether amount to wei (18 decimals).
-func ParseEtherFloat(v float64) *big.Int {
-	s := strconv.FormatFloat(v, 'f', -1, 64)
-	f, _, err := new(big.Float).Parse(s, 10)
+// ParseEther converts a decimal string amount to wei (18 decimals).
+//
+// Parsing is done with integer arithmetic on the decimal string, so values
+// coming straight off the wire (e.g. a json.Number like "0.585") never pass
+// through a float64 and cannot lose precision. Extra fractional digits beyond
+// 18 are truncated, matching the on-chain wei resolution.
+func ParseEther(s json.Number) *big.Int {
+	return parseUnits(s.String(), 18)
+}
+
+// parseUnits converts a decimal string into base units scaled by 10^decimals.
+//
+// It is fully integer-exact for plain decimal input. Scientific-notation input
+// (containing 'e'/'E') falls back to a high-precision big.Float conversion.
+func parseUnits(s string, decimals int) *big.Int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return big.NewInt(0)
+	}
+	if strings.ContainsAny(s, "eE") {
+		return parseUnitsFloat(s, decimals)
+	}
+
+	neg := false
+	switch {
+	case strings.HasPrefix(s, "-"):
+		neg, s = true, s[1:]
+	case strings.HasPrefix(s, "+"):
+		s = s[1:]
+	}
+
+	intPart, fracPart := s, ""
+	if i := strings.IndexByte(s, '.'); i >= 0 {
+		intPart, fracPart = s[:i], s[i+1:]
+	}
+	if intPart == "" {
+		intPart = "0"
+	}
+	if len(fracPart) > decimals {
+		fracPart = fracPart[:decimals]
+	}
+	for len(fracPart) < decimals {
+		fracPart += "0"
+	}
+
+	out, ok := new(big.Int).SetString(intPart+fracPart, 10)
+	if !ok {
+		return big.NewInt(0)
+	}
+	if neg {
+		out.Neg(out)
+	}
+	return out
+}
+
+func parseUnitsFloat(s string, decimals int) *big.Int {
+	f, _, err := big.ParseFloat(s, 10, 256, big.ToNearestEven)
 	if err != nil {
 		return big.NewInt(0)
 	}
-	wei := new(big.Float).Mul(f, big.NewFloat(math.Pow10(18)))
-	out, _ := wei.Int(nil)
+	scale := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)
+	f.Mul(f, new(big.Float).SetPrec(256).SetInt(scale))
+	out, _ := f.Int(nil)
 	return out
 }
 

@@ -95,7 +95,7 @@ func TestGetMarkets(t *testing.T) {
 	if len(m.Outcomes) != 1 || m.Outcomes[0].OnChainID == "" {
 		t.Fatalf("outcomes = %+v", m.Outcomes)
 	}
-	if m.Outcomes[0].BestAsk == nil || m.Outcomes[0].BestAsk.Price != 0.585 {
+	if m.Outcomes[0].BestAsk == nil || m.Outcomes[0].BestAsk.Price != "0.585" {
 		t.Fatalf("bestAsk = %+v", m.Outcomes[0].BestAsk)
 	}
 

@@ -73,8 +73,8 @@ func TestGetMarketOrderAmounts(t *testing.T) {
 	ob := NewOrderBuilder(ChainIDBnbMainnet, nil)
 	book := Book{
 		UpdateTimestampMs: 0,
-		Asks:              []DepthLevel{{0.5, 3}, {0.88, 4}},
-		Bids:              []DepthLevel{{0.9, 2}, {0.5, 3}},
+		Asks:              []DepthLevel{{"0.5", "3"}, {"0.88", "4"}},
+		Bids:              []DepthLevel{{"0.9", "2"}, {"0.5", "3"}},
 	}
 
 	t.Run("BUY by value", func(t *testing.T) {

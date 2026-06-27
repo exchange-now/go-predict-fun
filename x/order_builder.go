@@ -180,8 +180,8 @@ func (ob *OrderBuilder) processBook(depths []DepthLevel, quantityWei *big.Int) P
 		if remaining.Sign() <= 0 {
 			break
 		}
-		priceWei := internal.ParseEtherFloat(level[0])
-		qtyWei := internal.ParseEtherFloat(level[1])
+		priceWei := internal.ParseEther(level[0])
+		qtyWei := internal.ParseEther(level[1])
 
 		if remaining.Cmp(qtyWei) < 0 {
 			acc.QuantityWei.Add(acc.QuantityWei, remaining)
@@ -352,8 +352,8 @@ func (ob *OrderBuilder) getMarketOrderAmountsByValue(data MarketHelperValueInput
 	totalPrice := big.NewInt(0)
 
 	for _, level := range book.Asks {
-		priceWei := internal.ParseEtherFloat(level[0])
-		qtyWei := internal.ParseEtherFloat(level[1])
+		priceWei := internal.ParseEther(level[0])
+		qtyWei := internal.ParseEther(level[1])
 		remainingSpend := new(big.Int).Sub(currencyAmountWei, totalPrice)
 		if remainingSpend.Sign() <= 0 {
 			break

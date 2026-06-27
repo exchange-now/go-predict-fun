@@ -1,6 +1,9 @@
 package x
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // API base URLs from https://dev.predict.fun/
 const (
@@ -81,7 +84,7 @@ type Market struct {
 	ResolverAddress        string        `json:"resolverAddress"`
 	Outcomes               []Outcome     `json:"outcomes"`
 	QuestionIndex          *int          `json:"questionIndex,omitempty"`
-	SpreadThreshold        float64       `json:"spreadThreshold"`
+	SpreadThreshold        json.Number   `json:"spreadThreshold"`
 	ShareThreshold         int           `json:"shareThreshold"`
 	IsBoosted              bool          `json:"isBoosted"`
 	BoostStartsAt          *string       `json:"boostStartsAt,omitempty"`
@@ -110,10 +113,11 @@ type Outcome struct {
 	VariantData any         `json:"variantData,omitempty"`
 }
 
-// PriceLevel is a best bid/ask quote on an outcome.
+// PriceLevel is a best bid/ask quote on an outcome. Price (in [0,1]) and Size
+// are kept as json.Number to preserve the exact API representation.
 type PriceLevel struct {
-	Price float64 `json:"price"`
-	Size  float64 `json:"size"`
+	Price json.Number `json:"price"`
+	Size  json.Number `json:"size"`
 }
 
 // MarketRewards is the reward schedule for a market.
