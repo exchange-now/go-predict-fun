@@ -108,7 +108,10 @@ func (c *APIClient) GetAuthMessage(ctx context.Context) (string, error) {
 	if err := c.get(ctx, "/v1/auth/message", nil, &resp); err != nil {
 		return "", err
 	}
-	return resp.Data, nil
+	if resp.Data.Message == "" {
+		return "", fmt.Errorf("predict.fun auth: empty message")
+	}
+	return resp.Data.Message, nil
 }
 
 // PostAuth 提交签名换取 JWT，并缓存到客户端 bearer。

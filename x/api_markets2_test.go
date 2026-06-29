@@ -12,8 +12,11 @@ import (
 func TestGetMarkets2(t *testing.T) {
 	client, err := NewAPIClient(APIClientOptions{BaseURL: APIBaseURLTestnet})
 	require.NoError(t, err)
-	first := "1"
-	resp, err := client.GetMarkets(context.Background(), GetMarketsParams{First: &first})
+	req := GetMarketsParams{
+		First:  new("1"),
+		Status: new(MarketStatusOpen),
+	}
+	resp, err := client.GetMarkets(context.Background(), req)
 	require.NoError(t, err)
 	if len(resp.Data) == 0 {
 		t.Fatal("expected at least one market")

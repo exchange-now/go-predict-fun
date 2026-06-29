@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -56,16 +55,54 @@ func loadPFIntegrationEnv(t *testing.T) pfIntegrationEnv {
 		t.Skip("set PREDICT_API_KEY, PF_PRIVATE_KEY, PF_PREDICT_ACCOUNT in .env or environment to run live integration test")
 	}
 
+	//chainID := ChainIDBnbTestnet
+	chainID := ChainIDBnbMainnet
+	rpcURL := RPCURLByChainID[chainID]
+
 	return pfIntegrationEnv{
 		baseURL:        APIBaseURLProd,
 		apiKey:         apiKey,
 		privateKey:     privateKey,
 		predictAccount: predictAccount,
-		pfRPCURL:       os.Getenv("PF_RPC_URL"),
+		pfRPCURL:       rpcURL, // 留空则用 SDK 默认 BNB RPC
 		pfProxyIP:      os.Getenv("PF_PROXY_IP"),
 		pfProxyUser:    os.Getenv("PF_PROXY_IP_AUTH_USER"),
 		pfProxyPass:    os.Getenv("PF_PROXY_IP_AUTH_PASS"),
 	}
+}
+
+func loadPFAPIEnv(t *testing.T) pfIntegrationEnv {
+	t.Helper()
+	loadTestDotEnv()
+
+	if os.Getenv("PF_INTEGRATION") != "1" {
+		t.Skip("set PF_INTEGRATION=1 in .env or environment to run predict.fun live integration test")
+	}
+	apiKey := os.Getenv("PREDICT_API_KEY")
+	if apiKey == "" {
+		t.Skip("set PREDICT_API_KEY in .env or environment to run live API test")
+	}
+
+	return pfIntegrationEnv{
+		baseURL:     APIBaseURLProd,
+		apiKey:      apiKey,
+		pfProxyIP:   os.Getenv("PF_PROXY_IP"),
+		pfProxyUser: os.Getenv("PF_PROXY_IP_AUTH_USER"),
+		pfProxyPass: os.Getenv("PF_PROXY_IP_AUTH_PASS"),
+	}
+}
+
+func newPFAPIClient(t *testing.T, env pfIntegrationEnv) *APIClient {
+	t.Helper()
+	client, err := NewAPIClient(APIClientOptions{
+		BaseURL:   env.baseURL,
+		APIKey:    env.apiKey,
+		ProxyAddr: env.pfProxyIP,
+		ProxyUser: env.pfProxyUser,
+		ProxyPass: env.pfProxyPass,
+	})
+	require.NoError(t, err)
+	return client
 }
 
 func newPFIntegrationClients(t *testing.T, env pfIntegrationEnv) (*APIClient, *OrderBuilder) {
@@ -85,15 +122,7 @@ func newPFIntegrationClients(t *testing.T, env pfIntegrationEnv) (*APIClient, *O
 	require.NoError(t, err)
 	t.Cleanup(ob.Close)
 
-	client, err := NewAPIClient(APIClientOptions{
-		BaseURL:   env.baseURL,
-		APIKey:    env.apiKey,
-		ProxyAddr: env.pfProxyIP,
-		ProxyUser: env.pfProxyUser,
-		ProxyPass: env.pfProxyPass,
-	})
-	require.NoError(t, err)
-	return client, ob
+	return newPFAPIClient(t, env), ob
 }
 
 func TestIntegrationPFAuthenticate(t *testing.T) {
@@ -111,13 +140,7 @@ func TestIntegrationPFAuthenticate(t *testing.T) {
 func TestIntegrationPFCreateLimitOrder(t *testing.T) {
 	env := loadPFIntegrationEnv(t)
 
-	marketIDStr := os.Getenv("PF_MARKET_ID")
-	if marketIDStr == "" {
-		t.Skip("set PF_MARKET_ID in .env or environment to run live limit order test")
-	}
-	marketID, err := strconv.ParseInt(marketIDStr, 10, 64)
-	require.NoError(t, err)
-
+	var marketID int64 = 473
 	outcome := "Yes"
 	price := "0.001" // 故意低价避免成交
 	size := "5"

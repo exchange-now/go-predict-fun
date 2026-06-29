@@ -6,8 +6,12 @@ type GetMarketOrderbookResponse struct {
 }
 
 type GetAuthMessageResponse struct {
-	Success bool   `json:"success"`
-	Data    string `json:"data"`
+	Success bool            `json:"success"`
+	Data    AuthMessageData `json:"data"`
+}
+
+type AuthMessageData struct {
+	Message string `json:"message"`
 }
 
 type PostAuthRequest struct {
