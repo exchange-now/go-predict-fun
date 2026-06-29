@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -83,6 +84,41 @@ func (ob *OrderBuilder) SignTypedDataOrder(typedData EIP712TypedData) (SignedOrd
 	}
 	sig[64] += 27
 	return SignedOrder{Order: order, Signature: hexutil.Encode(sig)}, nil
+}
+
+// AuthSigner 返回 JWT 认证用的 signer 地址（Predict Account 时为 deposit address）。
+func (ob *OrderBuilder) AuthSigner() string {
+	if ob.predictAccount != nil {
+		return ob.predictAccount.Hex()
+	}
+	return ob.signerAddress.Hex()
+}
+
+// SignAuthMessage 对 GET /v1/auth/message 返回的文本签名，用于 JWT 认证。
+func (ob *OrderBuilder) SignAuthMessage(message string) (string, error) {
+	if ob.privateKey == nil {
+		return "", ErrMissingSigner
+	}
+	msgHash := accounts.TextHash([]byte(message))
+	if ob.predictAccount != nil {
+		domain := KernelDomainByChainID[ob.chainID]
+		digest := internal.EIP712WrapHash(common.BytesToHash(msgHash), domain.Name, domain.Version, int64(domain.ChainID), *ob.predictAccount)
+		sig, err := crypto.Sign(digest.Bytes(), ob.privateKey)
+		if err != nil {
+			return "", fmt.Errorf("%w: %v", ErrFailedOrderSign, err)
+		}
+		sig[64] += 27
+		validator := common.HexToAddress(ob.addresses.ECDSAValidator)
+		prefix := append([]byte{0x01}, validator.Bytes()...)
+		combined := append(prefix, sig...)
+		return hexutil.Encode(combined), nil
+	}
+	sig, err := crypto.Sign(common.BytesToHash(msgHash).Bytes(), ob.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrFailedOrderSign, err)
+	}
+	sig[64] += 27
+	return hexutil.Encode(sig), nil
 }
 
 func (ob *OrderBuilder) signPredictAccountMessage(messageHash common.Hash) (string, error) {

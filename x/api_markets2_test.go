@@ -10,7 +10,8 @@ import (
 )
 
 func TestGetMarkets2(t *testing.T) {
-	client := NewAPIClient(APIClientOptions{BaseURL: APIBaseURLTestnet})
+	client, err := NewAPIClient(APIClientOptions{BaseURL: APIBaseURLTestnet})
+	require.NoError(t, err)
 	first := "1"
 	resp, err := client.GetMarkets(context.Background(), GetMarketsParams{First: &first})
 	require.NoError(t, err)

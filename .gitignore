@@ -5,3 +5,4 @@
 .reference-py-sdk
 
 config.toml
+.env

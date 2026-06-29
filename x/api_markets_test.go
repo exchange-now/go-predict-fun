@@ -64,7 +64,10 @@ func TestGetMarkets(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewAPIClient(APIClientOptions{BaseURL: srv.URL, APIKey: "test-key"})
+	client, err := NewAPIClient(APIClientOptions{BaseURL: srv.URL, APIKey: "test-key"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	first := "10"
 	status := MarketStatusOpen
 	sort := MarketSortVolume24hDesc
@@ -111,8 +114,11 @@ func TestGetMarketsAPIError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := NewAPIClient(APIClientOptions{BaseURL: srv.URL})
-	_, err := client.GetMarkets(context.Background(), GetMarketsParams{})
+	client, err := NewAPIClient(APIClientOptions{BaseURL: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.GetMarkets(context.Background(), GetMarketsParams{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -130,7 +136,10 @@ func TestGetMarketsIntegration(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	client := NewAPIClient(APIClientOptions{BaseURL: APIBaseURLTestnet})
+	client, err := NewAPIClient(APIClientOptions{BaseURL: APIBaseURLTestnet})
+	if err != nil {
+		t.Fatal(err)
+	}
 	first := "1"
 	resp, err := client.GetMarkets(context.Background(), GetMarketsParams{First: &first})
 	if err != nil {
