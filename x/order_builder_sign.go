@@ -3,6 +3,7 @@ package x
 import (
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -166,8 +167,8 @@ func orderToMessage(order Order) EIP712Object {
 		"expiration":    order.Expiration,
 		"nonce":         order.Nonce,
 		"feeRateBps":    order.FeeRateBps,
-		"side":          order.Side,
-		"signatureType": order.SignatureType,
+		"side":          fmt.Sprint(order.Side),
+		"signatureType": fmt.Sprint(order.SignatureType),
 	}
 }
 
@@ -194,12 +195,20 @@ func toUint8(v any) uint8 {
 		return uint8(n)
 	case SignatureType:
 		return uint8(n)
+	case uint8:
+		return n
 	case float64:
 		return uint8(n)
 	case int:
 		return uint8(n)
 	case int64:
 		return uint8(n)
+	case string:
+		u, err := strconv.ParseUint(n, 10, 8)
+		if err != nil {
+			return 0
+		}
+		return uint8(u)
 	default:
 		return 0
 	}

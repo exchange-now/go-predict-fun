@@ -146,3 +146,45 @@ func TestBuildOrderAndTypedData(t *testing.T) {
 		t.Fatalf("primaryType = %s", typed.PrimaryType)
 	}
 }
+
+func TestBuildTypedDataHashMatchesTSSDK(t *testing.T) {
+	ob := NewOrderBuilder(ChainIDBnbMainnet, nil)
+
+	typed := EIP712TypedData{
+		PrimaryType: "Order",
+		Types: EIP712Types{
+			"EIP712Domain": EIP712Domain,
+			"Order":        OrderStructure,
+		},
+		Domain: EIP712Object{
+			"name":              ProtocolName,
+			"version":           ProtocolVersion,
+			"chainId":           int64(ChainIDBnbMainnet),
+			"verifyingContract": AddressesByChainID[ChainIDBnbMainnet].CTFExchange,
+		},
+		Message: EIP712Object{
+			"salt":          "123456789",
+			"maker":         "0x1234567890123456789012345678901234567890",
+			"signer":        "0x1234567890123456789012345678901234567890",
+			"taker":         ZeroAddress,
+			"tokenId":       "12345",
+			"makerAmount":   "1000000000000000000",
+			"takerAmount":   "2000000000000000000",
+			"expiration":    "4102444800",
+			"nonce":         "0",
+			"feeRateBps":    "100",
+			"side":          "0",
+			"signatureType": "0",
+		},
+	}
+
+	hash, err := ob.BuildTypedDataHash(typed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const expected = "0x814000c89efa61ae42a2bcc4c98e06e90c11480b95a12edea00e3411ec76821d"
+	if got := hash.Hex(); got != expected {
+		t.Fatalf("hash = %s, want %s", got, expected)
+	}
+}
