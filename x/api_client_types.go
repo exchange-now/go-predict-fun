@@ -33,9 +33,12 @@ type CreateOrderRequest struct {
 	Data CreateOrderData `json:"data"`
 }
 
+// CreateOrderData 对应 POST /v1/orders 的 data 字段。
+// 文档: https://dev.predict.fun/createorderrequest-14037466d0
 type CreateOrderData struct {
 	PricePerShare string            `json:"pricePerShare"`
 	Strategy      string            `json:"strategy"`
+	IsPostOnly    *bool             `json:"isPostOnly,omitempty"`
 	Order         SubmitSignedOrder `json:"order"`
 }
 
@@ -65,4 +68,5 @@ type LimitOrderParams struct {
 	FeeRateBps     int
 	IsNegRisk      bool
 	IsYieldBearing bool
+	IsPostOnly     *bool
 }

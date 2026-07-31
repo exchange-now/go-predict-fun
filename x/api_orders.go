@@ -44,34 +44,27 @@ func (c *APIClient) CreateLimitOrder(ctx context.Context, ob *OrderBuilder, para
 		return nil, fmt.Errorf("hash order: %w", err)
 	}
 
-	result, err := c.CreateOrder(ctx, CreateOrderRequest{
+	req := CreateOrderRequest{
 		Data: CreateOrderData{
 			PricePerShare: amounts.PricePerShare.String(),
 			Strategy:      string(OrderStrategyLimit),
+			IsPostOnly:    params.IsPostOnly,
 			Order: SubmitSignedOrder{
 				Order:     signed.Order,
 				Hash:      hash.Hex(),
 				Signature: signed.Signature,
 			},
 		},
-	})
+	}
+
+	result, err := c.CreateOrder(ctx, req)
 	if err != nil {
 		// 401 时尝试重新认证后重试一次
 		if apiErr, ok := err.(*APIError); ok && apiErr.Code == 401 {
 			if authErr := c.Authenticate(ctx, ob); authErr != nil {
 				return nil, fmt.Errorf("re-auth after 401: %w (original: %w)", authErr, err)
 			}
-			return c.CreateOrder(ctx, CreateOrderRequest{
-				Data: CreateOrderData{
-					PricePerShare: amounts.PricePerShare.String(),
-					Strategy:      string(OrderStrategyLimit),
-					Order: SubmitSignedOrder{
-						Order:     signed.Order,
-						Hash:      hash.Hex(),
-						Signature: signed.Signature,
-					},
-				},
-			})
+			return c.CreateOrder(ctx, req)
 		}
 		return nil, err
 	}
