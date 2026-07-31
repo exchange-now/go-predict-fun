@@ -3,14 +3,20 @@ package x
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/exchange-now/go-predict-fun/x/internal"
 )
 
-// CreateLimitOrder 构建、签名并提交 GTC 限价买单。
+// CreateLimitOrder 构建、签名并提交限价买单，默认 GTC，
+// 可用 params 上的可选字段指定 post-only、FOK 等下单控制。
 func (c *APIClient) CreateLimitOrder(ctx context.Context, ob *OrderBuilder, params LimitOrderParams) (*CreateOrderResultData, error) {
+	if params.IsPostOnly != nil && *params.IsPostOnly && params.IsFillOrKill != nil && *params.IsFillOrKill {
+		return nil, ErrConflictingOrderFlags
+	}
+
 	priceWei := internal.ParseEther(json.Number(params.PricePerShare))
 	qtyWei := internal.ParseEther(json.Number(params.QuantityShares))
 
@@ -46,9 +52,12 @@ func (c *APIClient) CreateLimitOrder(ctx context.Context, ob *OrderBuilder, para
 
 	req := CreateOrderRequest{
 		Data: CreateOrderData{
-			PricePerShare: amounts.PricePerShare.String(),
-			Strategy:      string(OrderStrategyLimit),
-			IsPostOnly:    params.IsPostOnly,
+			PricePerShare:         amounts.PricePerShare.String(),
+			Strategy:              string(OrderStrategyLimit),
+			IsFillOrKill:          params.IsFillOrKill,
+			IsPostOnly:            params.IsPostOnly,
+			ReservedBalancePolicy: params.ReservedBalancePolicy,
+			SelfTradePrevention:   params.SelfTradePrevention,
 			Order: SubmitSignedOrder{
 				Order:     signed.Order,
 				Hash:      hash.Hex(),
@@ -60,7 +69,8 @@ func (c *APIClient) CreateLimitOrder(ctx context.Context, ob *OrderBuilder, para
 	result, err := c.CreateOrder(ctx, req)
 	if err != nil {
 		// 401 时尝试重新认证后重试一次
-		if apiErr, ok := err.(*APIError); ok && apiErr.Code == 401 {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.Code == 401 {
 			if authErr := c.Authenticate(ctx, ob); authErr != nil {
 				return nil, fmt.Errorf("re-auth after 401: %w (original: %w)", authErr, err)
 			}

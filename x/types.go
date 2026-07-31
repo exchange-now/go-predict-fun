@@ -31,6 +31,25 @@ const (
 	OrderStrategyLimit  OrderStrategy = "LIMIT"
 )
 
+// SelfTradePrevention decides which side is cancelled when an order would match
+// against another order from the same account.
+type SelfTradePrevention string
+
+const (
+	SelfTradePreventionCancelMaker SelfTradePrevention = "CANCEL_MAKER"
+	SelfTradePreventionCancelTaker SelfTradePrevention = "CANCEL_TAKER"
+	SelfTradePreventionCancelBoth  SelfTradePrevention = "CANCEL_BOTH"
+)
+
+// ReservedBalancePolicy controls how balance already reserved by resting orders
+// is treated when the new order is checked.
+type ReservedBalancePolicy string
+
+const (
+	ReservedBalancePolicyRejectMarketOrder        ReservedBalancePolicy = "REJECT_MARKET_ORDER"
+	ReservedBalancePolicySkipReservedBalanceCheck ReservedBalancePolicy = "SKIP_RESERVED_BALANCE_CHECKS"
+)
+
 // DepthLevel is [price, quantity] from the order book API. Values are kept as
 // json.Number so the exact wire representation is preserved and converted to
 // wei without ever passing through a float64.

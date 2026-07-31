@@ -26,4 +26,7 @@ var (
 
 	// ErrInvalidSigner is returned when the Privy wallet does not own the Predict account.
 	ErrInvalidSigner = errors.New("signer is not the owner of the Predict account; use the Privy wallet from account settings")
+
+	// ErrConflictingOrderFlags is returned when post-only and fill-or-kill are both requested.
+	ErrConflictingOrderFlags = errors.New("isPostOnly and isFillOrKill are mutually exclusive")
 )
