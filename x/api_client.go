@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,8 +18,10 @@ import (
 type APIClient struct {
 	baseURL    string
 	apiKey     string
-	bearer     string
 	httpClient *http.Client
+
+	mu     sync.RWMutex
+	bearer string
 }
 
 // APIClientOptions configures a new APIClient.
@@ -114,7 +117,22 @@ func (c *APIClient) GetAuthMessage(ctx context.Context) (string, error) {
 	return resp.Data.Message, nil
 }
 
-// PostAuth 提交签名换取 JWT，并缓存到客户端 bearer。
+// BearerToken 返回当前缓存的 JWT（可能为空）。
+func (c *APIClient) BearerToken() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.bearer
+}
+
+// InvalidateAuth 清空客户端 bearer，下次鉴权请求需重新 Authenticate。
+func (c *APIClient) InvalidateAuth() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.bearer = ""
+}
+
+// PostAuth 提交签名换取 JWT，并写入客户端 bearer。
+// Authenticate 保持「每次换新」语义，不做 TTL 复用（复用由调用方策略决定）。
 func (c *APIClient) PostAuth(ctx context.Context, req PostAuthRequest) error {
 	var resp PostAuthResponse
 	if err := c.post(ctx, "/v1/auth", req, &resp); err != nil {
@@ -123,11 +141,13 @@ func (c *APIClient) PostAuth(ctx context.Context, req PostAuthRequest) error {
 	if resp.Data.Token == "" {
 		return fmt.Errorf("predict.fun auth: empty token")
 	}
+	c.mu.Lock()
 	c.bearer = resp.Data.Token
+	c.mu.Unlock()
 	return nil
 }
 
-// Authenticate 完成 JWT 认证流程：拉 message → 签名 → 换 token。
+// Authenticate 完成 JWT 认证流程：拉 message → 签名 → 换 token（每次都会重新换取）。
 func (c *APIClient) Authenticate(ctx context.Context, ob *OrderBuilder) error {
 	message, err := c.GetAuthMessage(ctx)
 	if err != nil {
@@ -164,12 +184,7 @@ func (c *APIClient) get(ctx context.Context, path string, query url.Values, out 
 		return err
 	}
 	req.Header.Set("Accept", "application/json")
-	if c.apiKey != "" {
-		req.Header.Set("x-api-key", c.apiKey)
-	}
-	if c.bearer != "" {
-		req.Header.Set("Authorization", "Bearer "+c.bearer)
-	}
+	c.setAuthHeaders(req)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -204,12 +219,7 @@ func (c *APIClient) post(ctx context.Context, path string, body any, out any) er
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
-	if c.apiKey != "" {
-		req.Header.Set("x-api-key", c.apiKey)
-	}
-	if c.bearer != "" {
-		req.Header.Set("Authorization", "Bearer "+c.bearer)
-	}
+	c.setAuthHeaders(req)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -229,6 +239,18 @@ func (c *APIClient) post(ctx context.Context, path string, body any, out any) er
 		return fmt.Errorf("predict.fun api http %d: %s", res.StatusCode, truncateBody(respBody))
 	}
 	return nil
+}
+
+func (c *APIClient) setAuthHeaders(req *http.Request) {
+	if c.apiKey != "" {
+		req.Header.Set("x-api-key", c.apiKey)
+	}
+	c.mu.RLock()
+	bearer := c.bearer
+	c.mu.RUnlock()
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	}
 }
 
 func decodeAPIResponse(body []byte, out any) error {

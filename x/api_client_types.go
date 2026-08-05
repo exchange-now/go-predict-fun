@@ -86,3 +86,82 @@ type LimitOrderParams struct {
 	ReservedBalancePolicy ReservedBalancePolicy
 	SelfTradePrevention   SelfTradePrevention
 }
+
+// OrderListStatus 是 GET /v1/orders 列表 filter（官方仅 OPEN|FILLED）。
+type OrderListStatus string
+
+const (
+	OrderListStatusOpen   OrderListStatus = "OPEN"
+	OrderListStatusFilled OrderListStatus = "FILLED"
+)
+
+// ListOrdersParams 是 GET /v1/orders 查询参数。
+type ListOrdersParams struct {
+	Status OrderListStatus
+	First  string  // 分页大小，如 "100"
+	After  *string // cursor
+}
+
+// OrderRecord 是订单列表/单查返回的订单摘要。
+type OrderRecord struct {
+	ID             string `json:"id"`
+	MarketID       int64  `json:"marketId"`
+	Amount         string `json:"amount"`
+	AmountFilled   string `json:"amountFilled"`
+	Status         string `json:"status"`
+	IsNegRisk      bool   `json:"isNegRisk"`
+	IsYieldBearing bool   `json:"isYieldBearing"`
+	Order          struct {
+		Hash string `json:"hash"`
+	} `json:"order"`
+}
+
+// ListOrdersResponse 是 GET /v1/orders 分页响应。
+type ListOrdersResponse struct {
+	Success bool          `json:"success"`
+	Cursor  *string       `json:"cursor"`
+	Data    []OrderRecord `json:"data"`
+}
+
+// GetOrderResponse 是 GET /v1/orders/{hash|id} 响应。
+type GetOrderResponse struct {
+	Success bool        `json:"success"`
+	Data    OrderRecord `json:"data"`
+}
+
+// RemoveOrdersRequest 是 POST /v1/orders/remove 请求体。
+type RemoveOrdersRequest struct {
+	Data RemoveOrdersData `json:"data"`
+}
+
+type RemoveOrdersData struct {
+	IDs []string `json:"ids"`
+}
+
+// RemoveOrdersResponse 是 POST /v1/orders/remove 响应。
+type RemoveOrdersResponse struct {
+	Success bool     `json:"success"`
+	Removed []string `json:"removed"`
+	Noop    []string `json:"noop"`
+}
+
+// ListPositionsParams 是 GET /v1/positions 查询参数。
+type ListPositionsParams struct {
+	First string
+	After *string
+}
+
+// PositionRecord 是持仓列表条目。
+type PositionRecord struct {
+	Amount  string `json:"amount"`
+	Outcome struct {
+		OnChainID string `json:"onChainId"`
+	} `json:"outcome"`
+}
+
+// ListPositionsResponse 是 GET /v1/positions 分页响应。
+type ListPositionsResponse struct {
+	Success bool             `json:"success"`
+	Cursor  *string          `json:"cursor"`
+	Data    []PositionRecord `json:"data"`
+}

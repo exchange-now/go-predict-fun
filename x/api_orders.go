@@ -68,9 +68,10 @@ func (c *APIClient) CreateLimitOrder(ctx context.Context, ob *OrderBuilder, para
 
 	result, err := c.CreateOrder(ctx, req)
 	if err != nil {
-		// 401 时尝试重新认证后重试一次
+		// 401 时清掉脏 bearer，重新认证后重试一次
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.Code == 401 {
+			c.InvalidateAuth()
 			if authErr := c.Authenticate(ctx, ob); authErr != nil {
 				return nil, fmt.Errorf("re-auth after 401: %w (original: %w)", authErr, err)
 			}
